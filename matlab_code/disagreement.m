@@ -53,7 +53,6 @@ function [best_result_im, D] = disagreement(orig_im, noisy_im, D_init, patch_siz
         E = curY - D * X;
         
         [D, X, ~] = dictUpdate(atoms_num, D, X, E);
-        
 
         %% Image reconstruction stage
         current_local_estimate_patches = D * X;
