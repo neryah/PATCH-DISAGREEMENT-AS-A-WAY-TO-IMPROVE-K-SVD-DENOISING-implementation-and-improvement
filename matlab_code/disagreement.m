@@ -35,12 +35,13 @@ function [best_result_im, D] = disagreement(orig_im, noisy_im, D_init, patch_siz
     best_psnr = 0;
     best_result_im = zeros(size(noisy_im));
     
-    for J = 1 : iters_num
+    for J = 1 : 2*iters_num
         %% Sparse coding stage
+        curY = Y - Q; % minus disagreement!
         % Use Batch OMP to compute the sparse representation vectors x_i,
         % for every data sample y_i.
 
-        X = omp(D'*(Y-Q),D'*D,T); % minus disagreement!
+        X = omp(D'*curY,D'*D,T);
 
 %         for patch_num = 1 : patches_num
 %             X(:,patch_num) = omp(D, Y(:,patch_num) - Q(:,patch_num), T);
@@ -49,47 +50,34 @@ function [best_result_im, D] = disagreement(orig_im, noisy_im, D_init, patch_siz
         %% Codebook update stage
         % Compute total error matrix now for faster computations.
         % It will be updated on fly to avoid massive recalculations.
-        E = Y - Q - D * X; % minus disagreement!
+        E = curY - D * X;
         
-        for k = 1 : atoms_num
-            % Define w_k as a group of examples which used atom d_k in
-            % their sparse representation.
-            w_k = find(X(k,:));
-            
-            % If w_k is empty there's no need to update this atom,
-            % it was not used.
-            if size(w_k) ~= 0
-                % Restrict E_k by choosing only the columns corresponding
-                % those elements that initially used d_k in their representation.
-                E_kr = E(:,w_k) + D(:,k) * X(k,w_k);
-                
-                [U, Sigma, V] = svds(E_kr,1);
-                D(:,k) = U(:,1);
-                X(k,w_k) = Sigma(1,1) * V(:,1)';
-                
-                % Update E on fly
-                E(:,w_k) = E_kr - D(:,k) * X(k,w_k);
-            end
-        end
+        [D, X, ~] = dictUpdate(atoms_num, D, X, E);
         
 
         %% Image reconstruction stage
-        current_global_estimate_patches = D * X;
-        current_global_estimate = col_to_im(current_global_estimate_patches, patch_size, size(noisy_im));
-        
-        current_psnr = compute_psnr(orig_im,current_global_estimate);
+        current_local_estimate_patches = D * X;
+        current_global_estimate = col_to_im(current_local_estimate_patches, patch_size, size(noisy_im));
+        current_global_estimate = 0.995*current_global_estimate + 0.005*(noisy_im);
+        current_psnr = compute_psnr(orig_im, current_global_estimate);
         if current_psnr > best_psnr
            best_psnr = current_psnr;
            best_result_im = current_global_estimate;
-           fprintf('Found better PSNR at iteration %i\n',J);
+           fprintf('Found better PSNR at iteration %i\n',floor(J/2));
         end
         
-        fprintf('PSNR at iteration %i: %4.4f\n',J,current_psnr);
+        % fprintf('PSNR at iteration %i: %4.4f\n',J,current_psnr);
         
         %% Disagreement - update stage
-        patches_from_restored_estimate = im2col(current_global_estimate,patch_size);
-        Q = current_global_estimate_patches - patches_from_restored_estimate;
-        fprintf('Norm of Q is %4.4f\n',norm(Q,'fro'));
+        patches_from_restored_estimate = im2col(current_global_estimate, patch_size);
+        if mod(J,2)>0
+            Q=(current_local_estimate_patches - patches_from_restored_estimate);
+        else
+            fprintf('Norm of Q is %4.4f\n',norm(Q,'fro'));
+            fprintf('PSNR at iteration %i: %4.4f\n',J/2,current_psnr);
+            Q = 0;
+        end
+        % fprintf('Norm of Q is %4.4f\n',norm(Q,'fro'));
         % fprintf('Ended iteration %i of Patch-Disagreement\n',J);
     end
    
