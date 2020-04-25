@@ -60,9 +60,12 @@ function [best_result_im, D] = disagreement(orig_im, noisy_im, D_init, patch_siz
         current_global_estimate = 0.995*current_global_estimate + 0.005*(noisy_im);
         current_psnr = compute_psnr(orig_im, current_global_estimate);
         if current_psnr > best_psnr
-           best_psnr = current_psnr;
-           best_result_im = current_global_estimate;
-           fprintf('Found better PSNR at iteration %i\n',floor(J/2));
+            best_psnr = current_psnr;
+            best_result_im = current_global_estimate;
+            fprintf('Found better PSNR at iteration %i\n',floor(J/2));
+            if mod(J,2)>0
+                fprintf('----------------Q = 0---------------\n');
+            end
         end
         
         % fprintf('PSNR at iteration %i: %4.4f\n',J,current_psnr);
