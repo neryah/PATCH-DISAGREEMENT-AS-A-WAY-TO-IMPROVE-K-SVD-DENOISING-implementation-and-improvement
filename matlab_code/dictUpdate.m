@@ -1,15 +1,19 @@
 function [D, X, E] = dictUpdate(atoms_num, D, X, E)
     %% Description
-    % this is the main part of KSVD implementation, we used in the
-    % disagreement algorithm implementation.
+    % Dictionary-Update stage from K-SVD algorithm.
+    % X is updated together with D.
+    % Used as part of K-SVD and "Patch-Disagreement" implementations.
+    % 
+    % Done as part of course project for course:
+    % 236862 Sparse and Redundant Representations
+    % Technion - IIT, 2020
     
     %% Parameters:
     % atoms_num - Number of atoms in the dictionary.
     % D - The current dictionary.
-    % X - holds sparse representations.
-    % T - Total error matrix .
+    % X - Holds sparse representations.
+    % E - Total error matrix .
 
-    
     % Define w_k as a group of examples which used atom d_k in
     % their sparse representation.
     for k = 1 : atoms_num
@@ -32,4 +36,4 @@ function [D, X, E] = dictUpdate(atoms_num, D, X, E)
             E(:,w_k) = E_kr - D(:,k) * X(k,w_k);
         end
     end
-
+end
